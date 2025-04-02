@@ -1,0 +1,28 @@
+{
+    "name": "@lingshe-tradebot/frontend",
+    "private": true,
+    "version": "0.1.0",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "@vitejs/plugin-vue": "^5.2.3",
+        "ant-design-vue": "^4.2.6",
+        "axios": "^1.6.8",
+        "echarts": "^5.6.0",
+        "pinia": "^3.0.1",
+        "unplugin-vue-components": "^28.4.1",
+        "vue": "^3.5.13",
+        "vue-router": "^4.3.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.30",
+        "concurrently": "^8.2.2",
+        "consola": "^3.2.3",
+        "cross-env": "^7.0.3",
+        "vite-plugin-style-import": "^2.0.0",
+        "wait-on": "^7.2.0"
+    }
+}
