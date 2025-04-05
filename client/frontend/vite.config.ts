@@ -11,8 +11,8 @@ const srcRoot = path.resolve(__dirname, 'src')
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [
-        vue() as any,
-        (Components({
+        vue(),
+        Components({
             // 自动导入组件
             resolvers: [
                 AntDesignVueResolver({
@@ -27,7 +27,7 @@ export default defineConfig({
             deep: true,
             // 生成类型声明文件
             dts: true,
-        })) as any,
+        }),
         createStyleImportPlugin({
             resolves: [
                 AndDesignVueResolve()
@@ -37,12 +37,10 @@ export default defineConfig({
                 {
                     libraryName: 'ant-design-vue',
                     esModule: true,
-                    resolveStyle: (name: string) => {
-                        return `ant-design-vue/es/${name}/style/index`
-                    }
+                    resolveStyle: (name) => `ant-design-vue/es/${name}/style/index`
                 }
             ]
-        }) as any
+        })
     ],
     base: './',
     resolve: {
@@ -59,20 +57,6 @@ export default defineConfig({
                     hack: `true; @import "${path.resolve(srcRoot, 'theme.less')}";`,
                 },
             },
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         },
     },
     server: {
@@ -80,9 +64,10 @@ export default defineConfig({
         strictPort: false,
         proxy: {
             '/api': {
-                target: 'http://localhost:8000',
+                target: 'http://localhost:8080',
                 changeOrigin: true,
-                rewrite: (pathStr: string) => pathStr.replace(/^\/api/, '')
+                // 保留/api路径
+                rewrite: (pathStr) => pathStr
             },
         },
     },
@@ -91,4 +76,4 @@ export default defineConfig({
         assetsDir: 'assets',
         emptyOutDir: true,
     },
-} as any)
+})

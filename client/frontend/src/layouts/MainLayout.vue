@@ -28,11 +28,15 @@
         
         <Menu.Item key="transactions" @click="navigateTo('/transactions')">
           <template #icon><TransactionOutlined /></template>
-          <span>成交记录</span>
+          <span>交易记录</span>
         </Menu.Item>
         <Menu.Item key="risk" @click="navigateTo('/risk')">
           <template #icon><AlertOutlined /></template>
           <span>风控管理</span>
+        </Menu.Item>
+        <Menu.Item key="exchange" @click="navigateTo('/exchange')">
+          <template #icon><BankOutlined /></template>
+          <span>交易所管理</span>
         </Menu.Item>
         <Menu.Item key="account" @click="navigateTo('/account')">
           <template #icon><UserOutlined /></template>
@@ -161,6 +165,7 @@ import {
   LogoutOutlined,
   TransactionOutlined,
   BellOutlined,
+  BankOutlined,
 } from '@ant-design/icons-vue';
 
 const router = useRouter();
@@ -201,9 +206,10 @@ const getPageTitle = () => {
   const pathMap: Record<string, string> = {
     dashboard: '仪表盘',
     strategies: '策略管理',
-    transactions: '成交记录',
+    transactions: '交易记录',
     risk: '风控管理',
-    account: '账户管理'
+    account: '账户管理',
+    exchange: '交易所管理'
   };
   const path = route.path.split('/')[1] || 'dashboard';
   return pathMap[path] || '灵蛇交易机器人';

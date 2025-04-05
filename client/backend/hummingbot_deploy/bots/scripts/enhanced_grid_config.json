@@ -1,0 +1,132 @@
+{
+    "controller_name": "enhanced_grid",
+    "controller_type": "generic",
+    "candles_config": [
+        {
+            "connector": "binance_perpetual",
+            "trading_pair": "BTC-USDT",
+            "interval": "1m",
+            "max_records": 500
+        }
+    ],
+    "connector_name": "binance_perpetual",
+    "trading_pair": "BTC-USDT",
+    "position_mode": "HEDGE",
+    "leverage": 3,
+    "total_investment": 1000,
+    "grid_levels": [
+        {
+            "level": 1,
+            "amount": 100,
+            "open_ratio": 1.0,
+            "open_rebound_ratio": 0.2,
+            "take_profit_batches": [
+                {
+                    "level": 1,
+                    "profit_ratio": 1.5,
+                    "rebound_ratio": 0.3,
+                    "portion": 50
+                },
+                {
+                    "level": 2,
+                    "profit_ratio": 3.0,
+                    "rebound_ratio": 0.5,
+                    "portion": 50
+                }
+            ],
+            "is_active": true
+        },
+        {
+            "level": 2,
+            "amount": 150,
+            "open_ratio": 2.0,
+            "open_rebound_ratio": 0.3,
+            "take_profit_batches": [
+                {
+                    "level": 1,
+                    "profit_ratio": 1.5,
+                    "rebound_ratio": 0.3,
+                    "portion": 50
+                },
+                {
+                    "level": 2,
+                    "profit_ratio": 3.0,
+                    "rebound_ratio": 0.5,
+                    "portion": 50
+                }
+            ],
+            "is_active": true
+        },
+        {
+            "level": 3,
+            "amount": 250,
+            "open_ratio": 3.0,
+            "open_rebound_ratio": 0.5,
+            "take_profit_batches": [
+                {
+                    "level": 1,
+                    "profit_ratio": 1.5,
+                    "rebound_ratio": 0.3,
+                    "portion": 30
+                },
+                {
+                    "level": 2,
+                    "profit_ratio": 3.0,
+                    "rebound_ratio": 0.5,
+                    "portion": 30
+                },
+                {
+                    "level": 3,
+                    "profit_ratio": 5.0,
+                    "rebound_ratio": 0.8,
+                    "portion": 40
+                }
+            ],
+            "is_active": true
+        },
+        {
+            "level": 4,
+            "amount": 500,
+            "open_ratio": 5.0,
+            "open_rebound_ratio": 0.8,
+            "take_profit_batches": [
+                {
+                    "level": 1,
+                    "profit_ratio": 2.0,
+                    "rebound_ratio": 0.5,
+                    "portion": 30
+                },
+                {
+                    "level": 2,
+                    "profit_ratio": 4.0,
+                    "rebound_ratio": 0.8,
+                    "portion": 30
+                },
+                {
+                    "level": 3,
+                    "profit_ratio": 7.0,
+                    "rebound_ratio": 1.2,
+                    "portion": 40
+                }
+            ],
+            "is_active": true
+        }
+    ],
+    "risk_control": {
+        "total_loss_limit": 500,
+        "total_profit_limit": 1000,
+        "max_loss_per_trade": 50,
+        "max_position": 1000,
+        "trading_time_limit": false,
+        "trading_start_time": "09:00:00",
+        "trading_end_time": "23:00:00",
+        "consecutive_loss_limit": 5,
+        "order_frequency_limit": 10,
+        "price_volatility_protection": true,
+        "volatility_adjusted_stop_loss": true,
+        "hedging_protection": false
+    },
+    "update_interval": 30,
+    "enable_dynamic_grid": true,
+    "max_grid_levels": 10
+}

@@ -1,0 +1,1174 @@
+<template>
+  <div class="exchange-management-container">
+    <!-- 顶部控件 -->
+    <div class="top-controls">
+      <div class="filter-controls">
+        <!-- 账户选择 -->
+        <a-select
+          v-model:value="currentAccount"
+          placeholder="选择账户"
+          style="width: 180px; margin-right: 10px;"
+          :loading="loading.accountList"
+          @change="handleAccountChange"
+        >
+          <a-select-option v-for="account in accountList" :key="account" :value="account">
+            {{ account }}
+          </a-select-option>
+          <a-select-option value="create_new_account">
+            + 创建账户
+          </a-select-option>
+        </a-select>
+
+        <!-- 删除账户按钮 -->
+        <a-button 
+          danger
+          type="text"
+          v-if="currentAccount"
+          @click="confirmDeleteAccount"
+          style="margin-right: 10px;"
+        >
+          <template #icon><delete-outlined /></template>
+          删除账户
+        </a-button>
+
+        <!-- 交易所类型筛选 -->
+        <a-select
+          v-model:value="exchangeTypeFilter"
+          style="width: 120px; margin-right: 10px;"
+        >
+          <a-select-option value="all">全部</a-select-option>
+          <a-select-option value="CEX">CEX</a-select-option>
+          <a-select-option value="DEX">DEX</a-select-option>
+        </a-select>
+
+        <!-- 产品类型筛选 -->
+        <a-select
+          v-model:value="productTypeFilter"
+          style="width: 150px;"
+        >
+          <a-select-option value="all">全部</a-select-option>
+          <a-select-option value="spot">现货</a-select-option>
+          <a-select-option value="perpetual">永续合约</a-select-option>
+        </a-select>
+      </div>
+
+      <div class="action-controls">
+        <!-- 添加API密钥按钮 -->
+        <a-button 
+          type="primary" 
+          @click="showAddKeyModal" 
+          :disabled="!currentAccount"
+          style="margin-right: 10px;"
+        >
+          <template #icon><plus-outlined /></template>
+          添加API密钥
+        </a-button>
+
+        <!-- 刷新按钮 -->
+        <a-button 
+          @click="refreshData" 
+          :loading="loading.refreshing"
+        >
+          <template #icon><reload-outlined /></template>
+          刷新
+        </a-button>
+      </div>
+    </div>
+
+    <!-- CEX 交易所组 -->
+    <a-card class="exchange-group-card" title="中心化交易所 (CEX)" v-if="filteredCexConnectors.length > 0">
+      <a-table
+        :dataSource="filteredCexConnectors"
+        :columns="connectorColumns"
+        :loading="loading.credentials"
+        rowKey="connector"
+        :pagination="false"
+      >
+        <!-- 交易所列 -->
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'exchange'">
+            {{ getExchangeLabel(record.exchange) }}
+          </template>
+
+          <!-- 产品类型列 -->
+          <template v-else-if="column.key === 'productType'">
+            {{ getProductTypeLabel(record.productType) }}
+          </template>
+
+          <!-- 状态列 -->
+          <template v-else-if="column.key === 'status'">
+            <a-tag :color="record.status === 'connected' ? 'success' : record.status === 'pending' ? 'warning' : 'error'">
+              {{ getStatusText(record.status) }}
+            </a-tag>
+          </template>
+
+          <!-- 操作列 -->
+          <template v-else-if="column.key === 'action'">
+            <div class="action-buttons-cell">
+              <a-button type="text" @click="testConnection(record)" :loading="record.testing">
+                <template #icon><check-circle-outlined /></template>
+                测试
+              </a-button>
+              <a-button type="text" @click="viewCredential(record)">
+                <template #icon><eye-outlined /></template>
+                查看
+              </a-button>
+              <a-button type="text" @click="editCredential(record)">
+                <template #icon><edit-outlined /></template>
+                修改
+              </a-button>
+              <a-button type="text" danger @click="deleteCredential(record)">
+                <template #icon><delete-outlined /></template>
+                删除
+              </a-button>
+            </div>
+          </template>
+        </template>
+      </a-table>
+    </a-card>
+
+    <!-- DEX 交易所组 -->
+    <a-card class="exchange-group-card" title="去中心化交易所 (DEX)" v-if="filteredDexConnectors.length > 0">
+      <a-table
+        :dataSource="filteredDexConnectors"
+        :columns="connectorColumns"
+        :loading="loading.credentials"
+        rowKey="connector"
+        :pagination="false"
+      >
+        <!-- 交易所列 -->
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'exchange'">
+            {{ getExchangeLabel(record.exchange) }}
+          </template>
+
+          <!-- 产品类型列 -->
+          <template v-else-if="column.key === 'productType'">
+            {{ getProductTypeLabel(record.productType) }}
+          </template>
+
+          <!-- 状态列 -->
+          <template v-else-if="column.key === 'status'">
+            <a-tag :color="record.status === 'connected' ? 'success' : record.status === 'pending' ? 'warning' : 'error'">
+              {{ getStatusText(record.status) }}
+            </a-tag>
+          </template>
+
+          <!-- 操作列 -->
+          <template v-else-if="column.key === 'action'">
+            <div class="action-buttons-cell">
+              <a-button type="text" @click="testConnection(record)" :loading="record.testing">
+                <template #icon><check-circle-outlined /></template>
+                测试
+              </a-button>
+              <a-button type="text" @click="viewCredential(record)">
+                <template #icon><eye-outlined /></template>
+                查看
+              </a-button>
+              <a-button type="text" @click="editCredential(record)">
+                <template #icon><edit-outlined /></template>
+                修改
+              </a-button>
+              <a-button type="text" danger @click="deleteCredential(record)">
+                <template #icon><delete-outlined /></template>
+                删除
+              </a-button>
+            </div>
+          </template>
+        </template>
+      </a-table>
+    </a-card>
+
+    <!-- 空状态 -->
+    <a-empty 
+      v-if="filteredCexConnectors.length === 0 && filteredDexConnectors.length === 0"
+      :description="getEmptyDescription()"
+    >
+      <template #extra>
+        <a-button type="primary" @click="showAddKeyModal" v-if="currentAccount && currentAccount !== 'create_new_account'">添加API密钥</a-button>
+        <a-button type="primary" @click="showAddAccountModal" v-else>添加账户</a-button>
+      </template>
+    </a-empty>
+
+    <!-- 添加/编辑API密钥弹窗 -->
+    <a-modal
+      v-model:visible="keyModalVisible"
+      :title="isEditMode ? '修改API密钥' : '添加API密钥'"
+      @cancel="resetKeyForm"
+      @ok="submitKeyForm"
+      :confirm-loading="loading.addKey"
+      :ok-button-props="{ disabled: !isKeyFormValid }"
+    >
+      <!-- 账户选择 -->
+      <a-form-item 
+        label="账户名称" 
+        :label-col="{ span: 8 }" 
+        :wrapper-col="{ span: 16 }"
+      >
+        <a-select
+          v-model:value="keyForm.accountName"
+          placeholder="选择账户"
+          style="width: 100%"
+          :disabled="isEditMode"
+          @change="handleKeyFormAccountChange"
+        >
+          <a-select-option v-for="account in accountList" :key="account" :value="account">
+            {{ account }}
+          </a-select-option>
+          <a-select-option value="new_account" v-if="!isEditMode">
+            + 创建账户
+          </a-select-option>
+        </a-select>
+        
+        <!-- 创建新账户输入框 -->
+        <a-input
+          v-if="keyForm.accountName === 'new_account'"
+          v-model:value="newAccountName"
+          placeholder="输入新账户名称"
+          style="margin-top: 10px"
+          @blur="validateNewAccountName"
+        />
+        <div v-if="newAccountNameError" style="color: #ff4d4f; font-size: 12px; text-align: center;">{{ newAccountNameError }}</div>
+      </a-form-item>
+
+      <!-- 交易所选择 -->
+      <a-form-item 
+        label="交易所" 
+        :label-col="{ span: 8 }" 
+        :wrapper-col="{ span: 16 }"
+      >
+        <a-select
+          v-model:value="keyForm.exchange"
+          placeholder="选择交易所"
+          style="width: 100%"
+          :disabled="isEditMode"
+          @change="handleExchangeChange"
+        >
+          <a-select-option 
+            v-for="exchange in visibleExchanges" 
+            :key="exchange.name" 
+            :value="exchange.name"
+          >
+            {{ exchange.label }}
+          </a-select-option>
+        </a-select>
+      </a-form-item>
+
+      <!-- 产品类型选择 -->
+      <a-form-item 
+        label="产品类型" 
+        :label-col="{ span: 8 }" 
+        :wrapper-col="{ span: 16 }" 
+        v-if="keyForm.exchange"
+      >
+        <a-select
+          v-model:value="keyForm.productType"
+          placeholder="选择产品类型"
+          style="width: 100%"
+          :disabled="isEditMode"
+          @change="handleProductTypeChange"
+        >
+          <a-select-option 
+            v-for="type in availableProductTypes" 
+            :key="type.value" 
+            :value="type.value"
+          >
+            {{ type.label }}
+          </a-select-option>
+        </a-select>
+      </a-form-item>
+
+      <!-- 连接器名称显示 -->
+      <a-form-item 
+        label="连接器" 
+        :label-col="{ span: 8 }" 
+        :wrapper-col="{ span: 16 }" 
+        v-if="keyForm.connector"
+      >
+        <a-input :value="keyForm.connector" disabled />
+      </a-form-item>
+
+      <!-- API密钥字段 -->
+      <template v-if="connectorConfig.length > 0">
+        <a-form-item 
+          v-for="field in connectorConfig" 
+          :key="field" 
+          :label="field"
+          :label-col="{ span: 8 }"
+          :wrapper-col="{ span: 16 }"
+        >
+          <a-input
+            v-model:value="keyForm.keys[field]"
+            :placeholder="`输入${field}`"
+            :type="'text'"
+          />
+        </a-form-item>
+      </template>
+    </a-modal>
+
+    <!-- 查看API密钥弹窗 -->
+    <a-modal
+      v-model:visible="viewModalVisible"
+      title="查看API密钥"
+      @cancel="viewModalVisible = false"
+      :footer="null"
+    >
+      <a-descriptions bordered>
+        <a-descriptions-item label="账户名称" :span="3">
+          {{ viewingCredential.accountName }}
+        </a-descriptions-item>
+        <a-descriptions-item label="交易所" :span="3">
+          {{ getExchangeLabel(viewingCredential.exchange) }}
+        </a-descriptions-item>
+        <a-descriptions-item label="产品类型" :span="3">
+          {{ getProductTypeLabel(viewingCredential.productType) }}
+        </a-descriptions-item>
+        <a-descriptions-item label="连接器" :span="3">
+          {{ viewingCredential.connector }}
+        </a-descriptions-item>
+        <a-descriptions-item label="状态" :span="3">
+          <a-tag :color="viewingCredential.status === 'connected' ? 'success' : viewingCredential.status === 'pending' ? 'warning' : 'error'">
+            {{ getStatusText(viewingCredential.status) }}
+          </a-tag>
+        </a-descriptions-item>
+        <!-- 显示保存的API密钥 -->
+        <template v-if="viewingCredential.keys && Object.keys(viewingCredential.keys).length > 0">
+          <a-descriptions-item 
+            v-for="(value, key) in viewingCredential.keys" 
+            :key="key" 
+            :label="key" 
+            :span="3"
+          >
+            {{ value }}
+          </a-descriptions-item>
+        </template>
+      </a-descriptions>
+    </a-modal>
+
+    <!-- 添加账户弹窗 -->
+    <a-modal
+      v-model:visible="accountModalVisible"
+      title="添加账户"
+      @cancel="cancelAddAccount"
+      @ok="addNewAccount"
+      :confirm-loading="loading.account"
+      :ok-button-props="{ disabled: !newAccountName || !!newAccountNameError }"
+    >
+      <a-form-item 
+        label="账户名称" 
+        :label-col="{ span: 8 }" 
+        :wrapper-col="{ span: 16 }"
+      >
+        <a-input
+          v-model:value="newAccountName"
+          placeholder="输入账户名称"
+          @blur="validateNewAccountName"
+        />
+        <div v-if="newAccountNameError" style="color: #ff4d4f; font-size: 12px; text-align: center;">{{ newAccountNameError }}</div>
+      </a-form-item>
+    </a-modal>
+
+    <!-- 删除账户确认对话框 -->
+    <a-modal
+      v-model:visible="deleteAccountModalVisible"
+      title="删除账户"
+      okText="删除"
+      okType="danger"
+      @cancel="deleteAccountModalVisible = false"
+      @ok="handleDeleteAccount"
+      :confirm-loading="loading.deleteAccount"
+    >
+      <p>您确定要删除账户 <strong>{{ currentAccount }}</strong> 吗？</p>
+      <p>此操作将删除该账户下的所有 API 密钥，且不可恢复。</p>
+    </a-modal>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted, h } from 'vue';
+import { message } from 'ant-design-vue';
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CheckCircleOutlined
+} from '@ant-design/icons-vue';
+import { apiClient } from '@/main';
+import { exchanges, getExchangeLabel, getProductTypeLabel, parseConnectorName as parseConnector, buildConnectorName } from '@/config/exchangeConfig';
+import { Credential, Exchange, ProductType } from '@/types/exchange';
+import { 
+  accountService,
+  credentialService,
+  connectorService
+} from '@/api/services/exchange';
+
+// API 基础URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+// 状态管理
+const loading = reactive({
+  accountList: false,
+  exchangeList: false,
+  credentials: false,
+  connectorConfig: false,
+  addKey: false,
+  account: false,
+  refreshing: false,
+  deleteAccount: false
+});
+
+const accountList = ref<string[]>([]);
+const currentAccount = ref<string>('');
+const allConnectors = ref<string[]>([]);
+const accountCredentials = ref<Credential[]>([]);
+const connectorConfig = ref<string[]>([]);
+
+// 表格列定义
+const connectorColumns = ref([
+  { title: '交易所', dataIndex: 'exchange', key: 'exchange' },
+  { title: '产品类型', dataIndex: 'productType', key: 'productType' },
+  { title: '连接器', dataIndex: 'connector', key: 'connector' },
+  { title: '状态', dataIndex: 'status', key: 'status' },
+  { title: '操作', key: 'action' }
+]);
+
+// 筛选控件状态
+const exchangeTypeFilter = ref('all');
+const productTypeFilter = ref('all');
+
+// 弹窗状态
+const keyModalVisible = ref(false);
+const viewModalVisible = ref(false);
+const accountModalVisible = ref(false);
+const isEditMode = ref(false);
+const isNewAccount = ref(false);
+const newAccountName = ref('');
+const newAccountNameError = ref('');
+
+// 查看和编辑的凭证
+const viewingCredential = ref<Credential & { testing?: boolean }>({
+  accountName: '',
+  connector: '',
+  exchange: '',
+  productType: '',
+  status: 'pending',
+  keys: {},
+  type: 'CEX'
+});
+
+// 表单状态
+const keyForm = reactive({
+  accountName: '',
+  exchange: '',
+  productType: '',
+  connector: '',
+  keys: {} as Record<string, string>
+});
+
+// 计算属性
+const visibleExchanges = computed(() => {
+  return exchanges.filter(exchange => exchange.visible);
+});
+
+// 筛选CEX交易所
+const visibleCexExchanges = computed(() => {
+  return visibleExchanges.value.filter(exchange => exchange.type === 'CEX');
+});
+
+// 筛选DEX交易所
+const visibleDexExchanges = computed(() => {
+  return visibleExchanges.value.filter(exchange => exchange.type === 'DEX');
+});
+
+const filteredConnectors = computed(() => {
+  let result = accountCredentials.value;
+  
+  // 过滤交易所类型
+  if (exchangeTypeFilter.value !== 'all') {
+    result = result.filter(c => c.type === exchangeTypeFilter.value);
+  }
+  
+  // 过滤产品类型
+  if (productTypeFilter.value !== 'all') {
+    result = result.filter(c => c.productType === productTypeFilter.value);
+  }
+  
+  return result;
+});
+
+const filteredCexConnectors = computed(() => {
+  return filteredConnectors.value.filter(c => c.type === 'CEX');
+});
+
+const filteredDexConnectors = computed(() => {
+  return filteredConnectors.value.filter(c => c.type === 'DEX');
+});
+
+const availableProductTypes = computed(() => {
+  if (!keyForm.exchange) return [];
+  
+  const exchange = exchanges.find(e => e.name === keyForm.exchange);
+  if (!exchange) return [];
+  
+  // 从服务器获取的可用连接器列表，用于进一步过滤
+  const supportedConnectors = allConnectors.value;
+  
+  // 过滤实际支持的产品类型
+  return exchange.productTypes.filter(productType => {
+    // 构建可能的连接器名称
+    const possibleConnectorName = `${exchange.name}${productType.connectorSuffix}`;
+    
+    // 检查是否在服务器支持的连接器列表中
+    // 如果后端返回的连接器列表为空，就假设配置文件中定义的都支持
+    if (!supportedConnectors.length) {
+      return true;
+    }
+    
+    return supportedConnectors.some(c => 
+      // 考虑多种情况：精确匹配、.yml后缀、大小写不敏感
+      c === possibleConnectorName || 
+      c === `${possibleConnectorName}.yml` ||
+      c.toLowerCase() === possibleConnectorName.toLowerCase()
+    );
+  });
+});
+
+const isKeyFormValid = computed(() => {
+  if (!keyForm.accountName || !keyForm.exchange || !keyForm.productType) {
+    return false;
+  }
+  
+  // 检查所有必填字段是否都有值
+  for (const field of connectorConfig.value) {
+    if (!keyForm.keys[field]) {
+      return false;
+    }
+  }
+  
+  // 如果是新账户，检查账户名称是否有效
+  if (isNewAccount.value && newAccountNameError.value) {
+    return false;
+  }
+  
+  return true;
+});
+
+// 方法
+// 加载账户列表
+const loadAccounts = async () => {
+  try {
+    loading.accountList = true;
+    const accounts = await accountService.getAccounts();
+    accountList.value = accounts;
+    
+    // 如果有账户且未选择账户，自动选择第一个
+    if (accounts.length > 0 && !currentAccount.value) {
+      currentAccount.value = accounts[0];
+      // 加载账户凭证
+      await loadCredentials();
+    }
+  } catch (error) {
+    console.error('加载账户列表失败:', error);
+  } finally {
+    loading.accountList = false;
+  }
+};
+
+// 加载交易所连接器
+const loadConnectors = async () => {
+  try {
+    loading.exchangeList = true;
+    allConnectors.value = await connectorService.getSupportedExchanges();
+    console.log('支持的连接器:', allConnectors.value);
+  } catch (error) {
+    console.error('加载连接器失败:', error);
+  } finally {
+    loading.exchangeList = false;
+  }
+};
+
+// 加载账户凭证
+const loadCredentials = async () => {
+  if (!currentAccount.value) return;
+  
+  try {
+    loading.credentials = true;
+    // 获取账户绑定的连接器
+    const connectors = await credentialService.getCredentials(currentAccount.value);
+    
+    // 获取账户状态，以检查连接器状态
+    const accountState = await credentialService.getAccountState();
+    
+    // 构建凭证列表
+    const credentials: Credential[] = [];
+    
+    for (const connector of connectors) {
+      // 移除可能的.yml后缀以进行解析
+      const cleanConnectorName = connector.replace(/\.yml$/, '');
+      
+      // 解析连接器名称，确定交易所和产品类型
+      const { exchangeName, productType, exchangeType } = parseConnector(cleanConnectorName);
+      
+      // 确定状态 - 同时检查带和不带.yml后缀的连接器状态
+      let status: 'connected' | 'pending' | 'error' = 'pending';
+      
+      // 检查不带后缀的状态
+      if (accountState && 
+          accountState[currentAccount.value] && 
+          accountState[currentAccount.value][cleanConnectorName]) {
+        status = 'connected';
+      } 
+      // 如果不带后缀没找到，再检查带后缀的状态
+      else if (accountState && 
+               accountState[currentAccount.value] && 
+               accountState[currentAccount.value][connector]) {
+        status = 'connected';
+      }
+      
+      // 创建凭证对象 - 使用原始连接器名称，以保持与后端一致
+      credentials.push({
+        accountName: currentAccount.value,
+        connector: cleanConnectorName, // 存储不带.yml后缀的名称，确保操作一致性
+        exchange: exchangeName,
+        productType,
+        status,
+        keys: {}, // 实际密钥存储在后端，前端不存储
+        type: exchangeType
+      });
+    }
+    
+    accountCredentials.value = credentials;
+  } catch (error) {
+    console.error('加载凭证失败:', error);
+  } finally {
+    loading.credentials = false;
+  }
+};
+
+// 刷新数据
+const refreshData = async () => {
+  loading.refreshing = true;
+  try {
+    await loadAccounts();
+    await loadConnectors();
+    if (currentAccount.value) {
+      await loadCredentials();
+    }
+    message.success('数据刷新成功');
+  } catch (error) {
+    console.error('刷新数据失败:', error);
+    message.error('刷新数据失败');
+  } finally {
+    loading.refreshing = false;
+  }
+};
+
+// 处理账户变更
+const handleAccountChange = async (value: string) => {
+  // 如果选择了创建新账户选项
+  if (value === 'create_new_account') {
+    showAddAccountModal();
+    return;
+  }
+  
+  currentAccount.value = value;
+  await loadCredentials();
+};
+
+// 显示添加密钥弹窗
+const showAddKeyModal = () => {
+  isEditMode.value = false;
+  isNewAccount.value = false;
+  keyForm.accountName = currentAccount.value;
+  keyForm.exchange = '';
+  keyForm.productType = '';
+  keyForm.connector = '';
+  keyForm.keys = {};
+  keyModalVisible.value = true;
+};
+
+// 显示添加账户弹窗
+const showAddAccountModal = () => {
+  accountModalVisible.value = true;
+  newAccountName.value = '';
+  newAccountNameError.value = '';
+};
+
+// 验证新账户名称
+const validateNewAccountName = () => {
+  if (!newAccountName.value) {
+    newAccountNameError.value = '账户名称不能为空';
+    return;
+  }
+  
+  if (accountList.value.includes(newAccountName.value)) {
+    newAccountNameError.value = '账户名称已存在';
+    return;
+  }
+  
+  newAccountNameError.value = '';
+};
+
+// 添加新账户
+const addNewAccount = async () => {
+  validateNewAccountName();
+  if (newAccountNameError.value) return;
+  
+  loading.account = true;
+  try {
+    const success = await accountService.addAccount(newAccountName.value);
+    if (success) {
+      // 更新账户列表
+      await loadAccounts();
+      
+      // 设置当前账户
+      currentAccount.value = newAccountName.value;
+      
+      // 关闭弹窗
+      accountModalVisible.value = false;
+      
+      // 清空输入框
+      newAccountName.value = '';
+      newAccountNameError.value = '';
+    }
+  } catch (error) {
+    console.error('创建账户失败:', error);
+  } finally {
+    loading.account = false;
+  }
+};
+
+// 取消添加账户
+const cancelAddAccount = () => {
+  accountModalVisible.value = false;
+  newAccountName.value = '';
+  newAccountNameError.value = '';
+  
+  // 如果是从下拉框创建账户，恢复之前选中的账户
+  if (currentAccount.value === 'create_new_account') {
+    // 恢复到上一个选中的账户，或者清空
+    if (accountList.value.length > 0) {
+      currentAccount.value = accountList.value[0];
+    } else {
+      currentAccount.value = '';
+    }
+  }
+};
+
+// 处理交易所变更
+const handleExchangeChange = () => {
+  keyForm.productType = '';
+  keyForm.connector = '';
+  keyForm.keys = {};
+  connectorConfig.value = [];
+};
+
+// 处理产品类型变更
+const handleProductTypeChange = async () => {
+  if (!keyForm.exchange || !keyForm.productType) {
+    keyForm.connector = '';
+    keyForm.keys = {};
+    connectorConfig.value = [];
+    return;
+  }
+  
+  // 根据交易所和产品类型确定连接器名称
+  const exchange = exchanges.find(e => e.name === keyForm.exchange);
+  const productType = exchange?.productTypes.find(p => p.value === keyForm.productType);
+  
+  if (exchange && productType) {
+    // 构建连接器名称，例如binance_perpetual
+    keyForm.connector = `${exchange.name}${productType.connectorSuffix}`;
+    console.log(`生成连接器名称: ${keyForm.connector}`);
+    
+    try {
+      // 加载连接器配置
+      await loadConnectorConfig();
+    } catch (error) {
+      console.error(`加载连接器配置失败: ${keyForm.connector}`, error);
+      message.error(`无法加载${exchange.label}的${getProductTypeLabel(keyForm.productType)}配置`);
+    }
+  }
+};
+
+// 加载连接器配置
+const loadConnectorConfig = async () => {
+  if (!keyForm.connector) return;
+  
+  try {
+    loading.connectorConfig = true;
+    console.log(`请求连接器配置: ${keyForm.connector}`);
+    
+    connectorConfig.value = await connectorService.getConnectorConfig(keyForm.connector);
+    console.log(`获取到的配置字段:`, connectorConfig.value);
+    
+    // 初始化凭证对象
+    keyForm.keys = {};
+    for (const field of connectorConfig.value) {
+      keyForm.keys[field] = '';
+    }
+  } catch (error) {
+    console.error(`加载连接器配置失败: ${keyForm.connector}`, error);
+    message.error(`加载API配置失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    connectorConfig.value = [];
+    keyForm.keys = {};
+  } finally {
+    loading.connectorConfig = false;
+  }
+};
+
+// 重置密钥表单
+const resetKeyForm = () => {
+  keyModalVisible.value = false;
+  isEditMode.value = false;
+  isNewAccount.value = false;
+  keyForm.accountName = '';
+  keyForm.exchange = '';
+  keyForm.productType = '';
+  keyForm.connector = '';
+  keyForm.keys = {};
+  connectorConfig.value = [];
+  newAccountName.value = '';
+  newAccountNameError.value = '';
+};
+
+// 提交密钥表单
+const submitKeyForm = async () => {
+  // 检查是否需要先创建账户
+  if (keyForm.accountName === 'new_account') {
+    validateNewAccountName();
+    if (newAccountNameError.value) return;
+    
+    loading.account = true;
+    try {
+      const success = await accountService.addAccount(newAccountName.value);
+      if (!success) {
+        message.error('创建账户失败');
+        return;
+      }
+      
+      keyForm.accountName = newAccountName.value;
+      
+      // 更新账户列表
+      await loadAccounts();
+    } catch (error) {
+      console.error('创建账户失败:', error);
+      message.error(`创建账户失败: ${error}`);
+      return;
+    } finally {
+      loading.account = false;
+    }
+  }
+  
+  // 表单验证 - 确保所有字段都已填写
+  for (const field of connectorConfig.value) {
+    if (!keyForm.keys[field] || keyForm.keys[field].trim() === '') {
+      message.error(`请填写${field}`);
+      return;
+    }
+  }
+  
+  loading.addKey = true;
+  try {
+    // 提交API密钥
+    const success = await credentialService.addConnectorKeys(
+      keyForm.accountName,
+      keyForm.connector,
+      keyForm.keys
+    );
+    
+    if (success) {
+      // 成功后保存密钥到本地存储，方便后续查看
+      const credentialKey = `${keyForm.accountName}_${keyForm.connector}`;
+      const savedCredentials = JSON.parse(localStorage.getItem('savedCredentials') || '{}');
+      savedCredentials[credentialKey] = keyForm.keys;
+      localStorage.setItem('savedCredentials', JSON.stringify(savedCredentials));
+      
+      // 更新当前账户（如果添加的是不同账户的密钥）
+      if (currentAccount.value !== keyForm.accountName) {
+        currentAccount.value = keyForm.accountName;
+      }
+      
+      // 重新加载凭证
+      await loadCredentials();
+      
+      // 关闭弹窗
+      resetKeyForm();
+      
+      message.success('API密钥添加成功');
+    }
+  } catch (error) {
+    console.error('添加API密钥失败:', error);
+    message.error(`添加API密钥失败: ${error}`);
+  } finally {
+    loading.addKey = false;
+  }
+};
+
+// 查看凭证详情
+const viewCredential = (record: Credential) => {
+  viewingCredential.value = { ...record };
+  
+  // 加载凭证配置和实际值
+  if (record.connector) {
+    connectorService.getConnectorConfig(record.connector).then((config: string[]) => {
+      // 为查看凭证预加载密钥值
+      const keyValues = viewingCredential.value.keys || {};
+      
+      // 从本地存储获取保存的凭证
+      const savedCredentials = JSON.parse(localStorage.getItem('savedCredentials') || '{}');
+      const credentialKey = `${record.accountName}_${record.connector}`;
+      
+      if (savedCredentials[credentialKey]) {
+        viewingCredential.value.keys = savedCredentials[credentialKey];
+      }
+      
+      viewModalVisible.value = true;
+    });
+  } else {
+    viewModalVisible.value = true;
+  }
+};
+
+// 编辑凭证
+const editCredential = async (record: Credential) => {
+  isEditMode.value = true;
+  
+  // 设置基本信息
+  keyForm.accountName = record.accountName;
+  keyForm.exchange = record.exchange;
+  keyForm.productType = record.productType;
+  keyForm.connector = record.connector;
+  
+  // 加载连接器配置
+  await loadConnectorConfig();
+  
+  // 设置为编辑模式
+  keyModalVisible.value = true;
+};
+
+// 删除凭证
+const deleteCredential = async (record: Credential) => {
+  const success = await credentialService.deleteCredential(record.accountName, record.connector);
+  if (success) {
+    await loadCredentials();
+  }
+};
+
+// 解析连接器名称 - 使用配置中的函数
+const parseConnectorName = (connector: string): { 
+  exchangeName: string; 
+  productType: string; 
+  exchangeType: 'CEX' | 'DEX' 
+} => {
+  return parseConnector(connector);
+};
+
+// 判断是否为秘密字段
+const isSecretField = (field: string): boolean => {
+  const secretPatterns = [
+    'secret', 'password', 'passphrase', 'private', 'key', '密码'
+  ];
+  
+  return secretPatterns.some(pattern => 
+    field.toLowerCase().includes(pattern.toLowerCase())
+  );
+};
+
+// 获取状态文本
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'connected': return '已连接';
+    case 'pending': return '待验证';
+    case 'error': return '连接失败';
+    default: return status;
+  }
+};
+
+// 获取空状态描述
+const getEmptyDescription = (): string => {
+  if (!currentAccount.value || currentAccount.value === 'create_new_account') {
+    return '请先选择或创建一个账户';
+  }
+  
+  if (exchangeTypeFilter.value !== 'all' || productTypeFilter.value !== 'all') {
+    return '没有符合筛选条件的数据';
+  }
+  
+  return '当前账户没有配置API密钥';
+};
+
+// 添加删除账户相关的状态
+const deleteAccountModalVisible = ref(false);
+
+// 添加确认删除账户函数
+const confirmDeleteAccount = () => {
+  if (!currentAccount.value) return;
+  deleteAccountModalVisible.value = true;
+};
+
+// 添加处理删除账户函数
+const handleDeleteAccount = async () => {
+  if (!currentAccount.value) return;
+  
+  loading.deleteAccount = true;
+  try {
+    const success = await accountService.deleteAccount(currentAccount.value);
+    if (success) {
+      // 更新账户列表
+      await loadAccounts();
+      deleteAccountModalVisible.value = false;
+    }
+  } finally {
+    loading.deleteAccount = false;
+  }
+};
+
+// 修改keyForm的accountName变化响应
+const handleKeyFormAccountChange = (value: string) => {
+  if (value === 'new_account') {
+    isNewAccount.value = true;
+    newAccountName.value = '';
+    newAccountNameError.value = '';
+  } else {
+    isNewAccount.value = false;
+  }
+};
+
+// 修改测试连接方法，使用服务层方法
+const testConnection = async (record: Credential & { testing?: boolean }) => {
+  // 设置临时loading状态
+  record.testing = true;
+  
+  try {
+    // 调用服务层测试连接方法
+    const result = await connectorService.testConnection(record.accountName, record.connector);
+    
+    if (result.success) {
+      message.success(`连接测试成功: ${record.connector}，可用余额: ${JSON.stringify(result.data)}`);
+      // 更新凭证状态为已连接
+      record.status = 'connected';
+    } else {
+      message.warning(`连接测试失败: 确认API密钥权限是否足够，或者帐户中是否有资产`);
+      // 更新凭证状态为连接失败
+      record.status = 'error';
+    }
+  } catch (error: any) {
+    console.error(`测试连接失败: ${record.connector}`, error);
+    const errorMsg = error.response?.data?.message || '连接失败，请检查API密钥或网络设置';
+    message.error(`连接测试失败: ${errorMsg}`);
+    // 更新凭证状态为连接失败
+    record.status = 'error';
+  } finally {
+    // 清除loading状态
+    record.testing = false;
+  }
+};
+
+// 初始化
+onMounted(async () => {
+  try {
+    // 先加载账户列表，再加载连接器和凭证
+    await loadAccounts();
+    await loadConnectors();
+    
+    // 清除可能存在的"create_new_account"选项
+    if (currentAccount.value === 'create_new_account') {
+      if (accountList.value.length > 0) {
+        currentAccount.value = accountList.value[0];
+      } else {
+        currentAccount.value = '';
+      }
+    }
+  } catch (error) {
+    console.error('初始化失败:', error);
+    message.error('加载数据失败，请刷新页面重试');
+  }
+});
+</script>
+
+<style scoped>
+.exchange-management-container {
+  padding: 20px;
+}
+
+.top-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.filter-controls {
+  display: flex;
+  align-items: center;
+}
+
+.exchange-group-card {
+  margin-bottom: 20px;
+}
+
+.exchange-group-card :deep(.ant-card-head) {
+  background-color: #f5f8ff;
+  text-align: center;
+}
+
+.exchange-group-card :deep(.ant-card-head-title) {
+  font-weight: bold;
+}
+
+.exchange-group-card :deep(.ant-table) {
+  margin-top: 10px;
+}
+
+.exchange-group-card :deep(.ant-table-thead > tr > th) {
+  background-color: #fafafa;
+  font-weight: bold;
+  text-align: center;
+}
+
+.exchange-group-card :deep(.ant-table-cell) {
+  text-align: center;
+}
+
+.exchange-group-card :deep(.ant-table-row:hover) {
+  background-color: #f0f7ff;
+}
+
+.action-controls {
+  display: flex;
+  align-items: center;
+}
+
+.action-buttons-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* 弹窗表单中的标签居中对齐 */
+:deep(.ant-modal-content .ant-form-item-label) {
+  text-align: right;
+}
+
+:deep(.ant-descriptions-item-label) {
+  text-align: center;
+  background-color: #fafafa;
+}
+
+:deep(.ant-descriptions-item-content) {
+  text-align: center;
+}
+
+/* 表单弹窗中的标题居中 */
+:deep(.ant-modal-title) {
+  text-align: center;
+}
+
+/* 空状态居中 */
+:deep(.ant-empty-description) {
+  text-align: center;
+}
+</style> 

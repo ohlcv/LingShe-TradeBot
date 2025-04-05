@@ -102,6 +102,11 @@ const routes = [
                 component: () => import('@/views/risk/RiskManagement.vue')
             },
             {
+                path: 'exchange',
+                name: 'Exchange',
+                component: () => import('@/views/exchange/ExchangeManagement.vue')
+            },
+            {
                 path: 'account',
                 name: 'Account',
                 component: () => import('@/views/account/AccountSettings.vue')
